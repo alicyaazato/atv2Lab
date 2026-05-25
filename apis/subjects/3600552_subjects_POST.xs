@@ -26,9 +26,15 @@ query "subjects" verb=POST {
       error = "Subject name is required"
     }
 
-    precondition ($input.name.length <= 255) {
+    precondition ($input.name.length >= 3 && $input.name.length <= 255) {
       error_type = "validation_error"
-      error = "Subject name must be max 255 characters"
+      error = "Subject name must be between 3 and 255 characters"
+    }
+
+    // Validate subject name doesn't contain only whitespace
+    precondition ($input.name.trim().length > 0) {
+      error_type = "validation_error"
+      error = "Subject name cannot be empty or whitespace only"
     }
 
     // Validate account exists and user has access
@@ -58,6 +64,17 @@ query "subjects" verb=POST {
 
     // Validate code is unique if provided
     if $input.code {
+      precondition ($input.code.length >= 3 && $input.code.length <= 50) {
+        error_type = "validation_error"
+        error = "Subject code must be between 3 and 50 characters"
+      }
+
+      // Validate code format (alphanumeric and basic symbols only)
+      precondition ($input.code.match(/^[A-Z0-9_-]+$/i)) {
+        error_type = "validation_error"
+        error = "Subject code must contain only letters, numbers, hyphens, and underscores"
+      }
+
       db.query subject {
         filter = {
           account_id: $input.account_id
@@ -73,9 +90,16 @@ query "subjects" verb=POST {
 
     // Validate optional fields
     if $input.description {
-      precondition ($input.description.length <= 2000) {
+      precondition ($input.description.length >= 5 && $input.description.length <= 2000) {
         error_type = "validation_error"
-        error = "Description must be max 2000 characters"
+        error = "Description must be between 5 and 2000 characters"
+      }
+    }
+
+    if $input.semester {
+      precondition ($input.semester.match(/^[1-8]$|^[I-VIII]$/) || $input.semester == "full-year") {
+        error_type = "validation_error"
+        error = "Semester must be 1-8, I-VIII, or 'full-year'"
       }
     }
 

@@ -1,0 +1,498 @@
+openapi: 3.0.0
+info:
+  title: Subjects API
+  description: |
+    RESTful API for managing academic subjects (courses/disciplines).
+    
+    ## Authentication
+    All endpoints require authentication via JWT token in `Authorization: Bearer <token>` header.
+    
+    ## Error Responses
+    All error responses follow this format:
+    ```json
+    {
+      "error": "error message",
+      "error_type": "error_type_code",
+      "details": {}
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: EduTrack Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.edutrack.com/v1
+    description: Production API
+
+tags:
+  - name: Subjects
+    description: Subject (course/discipline) management
+
+paths:
+  /subjects/my:
+    get:
+      operationId: listMySubjects
+      summary: List authenticated user's subjects
+      description: |
+        Retrieve all subjects owned by the authenticated user with pagination and filtering support.
+        
+        Results are sorted by creation date (newest first).
+      tags:
+        - Subjects
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of results to return per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of results to skip (for pagination)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, draft]
+          description: Filter by subject status
+        - name: semester
+          in: query
+          schema:
+            type: string
+          description: Filter by semester (e.g., "1", "2", "I", "II", "full-year")
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2100
+          description: Filter by academic year
+      responses:
+        '200':
+          description: Successful response with subjects data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Subject'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of results matching filters
+                      limit:
+                        type: integer
+                        description: Results per page
+                      offset:
+                        type: integer
+                        description: Results skipped
+              example:
+                data:
+                  - id: 1001
+                    name: "Introduction to Python"
+                    code: "CS101"
+                    description: "Learn Python fundamentals"
+                    owner_id: 123
+                    account_id: 456
+                    credits: 3
+                    semester: "1"
+                    year: 2024
+                    status: "active"
+                    is_active: true
+                    created_at: "2024-01-15T10:30:00Z"
+                    updated_at: "2024-01-15T10:30:00Z"
+                pagination:
+                  total: 15
+                  limit: 20
+                  offset: 0
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /subjects:
+    post:
+      operationId: createSubject
+      summary: Create a new subject
+      description: |
+        Create a new subject in the specified account. Only the authenticated user can create subjects they own.
+        
+        The authenticated user must belong to the account specified in the request.
+      tags:
+        - Subjects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubjectRequest'
+            example:
+              name: "Introduction to Python"
+              code: "CS101"
+              description: "Learn Python fundamentals for beginners"
+              credits: 3
+              semester: "1"
+              year: 2024
+              status: "active"
+              account_id: 456
+      responses:
+        '201':
+          description: Subject successfully created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subject'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /subjects/{id}:
+    get:
+      operationId: getSubject
+      summary: Get a specific subject
+      description: |
+        Retrieve details of a specific subject. The authenticated user must be either the owner or an admin of the account.
+      tags:
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Subject ID
+      responses:
+        '200':
+          description: Subject details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subject'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      operationId: updateSubject
+      summary: Update a subject
+      description: |
+        Update a subject's details. Only the owner or account admin can update a subject.
+        
+        Partial updates are supported - only provide fields you want to change.
+      tags:
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Subject ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubjectRequest'
+            example:
+              name: "Advanced Python Programming"
+              status: "active"
+              credits: 4
+      responses:
+        '200':
+          description: Subject successfully updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subject'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      operationId: deleteSubject
+      summary: Delete a subject
+      description: |
+        Delete a subject via soft delete (marking as archived/inactive). Only the owner or account admin can delete a subject.
+        
+        This operation is logged in the event audit trail.
+      tags:
+        - Subjects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Subject ID
+      responses:
+        '204':
+          description: Subject successfully deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  schemas:
+    Subject:
+      type: object
+      required:
+        - id
+        - name
+        - owner_id
+        - account_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Subject display name
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[A-Z0-9_-]+$'
+          description: Unique subject code (alphanumeric, hyphens, underscores)
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: Detailed subject description
+        owner_id:
+          type: integer
+          description: ID of user who owns this subject
+        account_id:
+          type: integer
+          description: ID of account this subject belongs to
+        credits:
+          type: number
+          minimum: 0
+          maximum: 20
+          nullable: true
+          description: Academic credits for this subject
+        semester:
+          type: string
+          enum: ["1", "2", "3", "4", "5", "6", "7", "8", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "full-year"]
+          nullable: true
+          description: Semester when subject is offered
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+          nullable: true
+          description: Academic year
+        status:
+          type: string
+          enum: ["active", "archived", "draft"]
+          description: Subject status
+        is_active:
+          type: boolean
+          description: Whether subject is currently active
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp (UTC, ISO 8601)
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC, ISO 8601)
+
+    CreateSubjectRequest:
+      type: object
+      required:
+        - name
+        - account_id
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Subject display name
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[A-Z0-9_-]+$'
+          description: Unique subject code (must be unique within account)
+        description:
+          type: string
+          minLength: 5
+          maxLength: 2000
+          nullable: true
+          description: Detailed subject description
+        credits:
+          type: number
+          minimum: 0
+          maximum: 20
+          nullable: true
+          description: Academic credits for this subject
+        semester:
+          type: string
+          enum: ["1", "2", "3", "4", "5", "6", "7", "8", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "full-year"]
+          nullable: true
+          description: Semester when subject is offered
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+          nullable: true
+          description: Academic year
+        status:
+          type: string
+          enum: ["active", "archived", "draft"]
+          default: "active"
+          description: Subject status
+        account_id:
+          type: integer
+          description: Account ID (user must belong to this account)
+
+    UpdateSubjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Subject display name
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[A-Z0-9_-]+$'
+          description: Unique subject code (must be unique within account)
+        description:
+          type: string
+          minLength: 5
+          maxLength: 2000
+          nullable: true
+          description: Detailed subject description
+        credits:
+          type: number
+          minimum: 0
+          maximum: 20
+          nullable: true
+          description: Academic credits for this subject
+        semester:
+          type: string
+          enum: ["1", "2", "3", "4", "5", "6", "7", "8", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "full-year"]
+          nullable: true
+          description: Semester when subject is offered
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+          nullable: true
+          description: Academic year
+        status:
+          type: string
+          enum: ["active", "archived", "draft"]
+          description: Subject status
+        is_active:
+          type: boolean
+          description: Whether subject is currently active
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required or invalid credentials
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              error_type:
+                type: string
+                enum: ["accessdenied"]
+          example:
+            error: "Authentication required"
+            error_type: "accessdenied"
+
+    ForbiddenError:
+      description: User lacks permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              error_type:
+                type: string
+                enum: ["accessdenied"]
+          example:
+            error: "Access denied"
+            error_type: "accessdenied"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              error_type:
+                type: string
+                enum: ["notfound"]
+          example:
+            error: "Subject not found"
+            error_type: "notfound"
+
+    BadRequestError:
+      description: Invalid request - validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              error_type:
+                type: string
+                enum: ["validation_error"]
+          example:
+            error: "Subject name must be between 3 and 255 characters"
+            error_type: "validation_error"

@@ -277,5 +277,23 @@
     "staged": false,
     "sha256": "d690e6267d32806e0a2ce504b1a6b94ebca61be36806023d85437dd9c4b544e8",
     "original": "Ly8gTWV1IHByaW1laXJvIGNvbWVudMOhcmlvIHZpYSBWUyBDb2RlCmFkZG9uIHVzZXIgewogIGlucHV0IHsKICAgIGludCB1c2VyX2lkPyB7CiAgICAgIHRhYmxlID0gInVzZXIiCiAgICB9CiAgfQoKICBzdGFjayB7CiAgICBkYi5xdWVyeSAiIiB7CiAgICAgIHdoZXJlID0gJGRiLnVzZXIuaWQgPT0gJGlucHV0LnVzZXJfaWQKICAgICAgcmV0dXJuID0ge3R5cGU6ICJsaXN0In0KICAgIH0KICB9Cn0="
+  },
+  {
+    "id": 753428,
+    "type": "table",
+    "path": "tables/753428_academic_task.xs",
+    "status": "added",
+    "staged": true,
+    "sha256": "",
+    "original": ""
+  },
+  {
+    "id": 754428,
+    "type": "table_trigger",
+    "path": "tables/triggers/754428_academic_task_triggers.xs",
+    "status": "added",
+    "staged": true,
+    "sha256": "",
+    "original": ""
   }
 ]
