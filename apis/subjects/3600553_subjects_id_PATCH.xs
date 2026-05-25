@@ -66,13 +66,24 @@ query "subjects/{id}" verb=PATCH {
 
     // Validate input fields
     if $input.name {
-      precondition ($input.name.length > 0 && $input.name.length <= 255) {
+      precondition ($input.name.trim().length >= 3 && $input.name.trim().length <= 255) {
         error_type = "validation_error"
-        error = "Subject name must be between 1 and 255 characters"
+        error = "Subject name must be between 3 and 255 characters"
       }
     }
 
     if $input.code {
+      precondition ($input.code.length >= 3 && $input.code.length <= 50) {
+        error_type = "validation_error"
+        error = "Subject code must be between 3 and 50 characters"
+      }
+
+      // Validate code format (alphanumeric and basic symbols only)
+      precondition ($input.code.match(/^[A-Z0-9_-]+$/i)) {
+        error_type = "validation_error"
+        error = "Subject code must contain only letters, numbers, hyphens, and underscores"
+      }
+
       // Check if code already exists for different subject in same account
       db.query subject {
         filter = {
@@ -92,9 +103,16 @@ query "subjects/{id}" verb=PATCH {
     }
 
     if $input.description {
-      precondition ($input.description.length <= 2000) {
+      precondition ($input.description.length >= 5 && $input.description.length <= 2000) {
         error_type = "validation_error"
-        error = "Description must be max 2000 characters"
+        error = "Description must be between 5 and 2000 characters"
+      }
+    }
+
+    if $input.semester {
+      precondition ($input.semester.match(/^[1-8]$|^[I-VIII]$/) || $input.semester == "full-year") {
+        error_type = "validation_error"
+        error = "Semester must be 1-8, I-VIII, or 'full-year'"
       }
     }
 

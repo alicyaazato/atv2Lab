@@ -1,53 +1,38 @@
-// Academic tasks registered by students to track their academic obligations
-// (lessons, tests, assignments) linked to specific subjects with status tracking.
 table academic_task {
   auth = false
 
   schema {
+    // Unique identifier for the academic task
     int id
-    
-    timestamp created_at?=now {
-      visibility = "private"
-    }
-    
-    timestamp updated_at?=now {
-      visibility = "private"
-    }
-
-    // Student who owns/created this academic task
+  
+    // Timestamp when the task was created
+    timestamp created_at?=now
+  
+    // Timestamp when the task was last updated
+    timestamp updated_at?=now
+  
+    // Reference to the student (user) who owns this task
     int user_id {
       table = "user"
     }
-
-    // Subject this task is linked to
+  
+    // Reference to the subject this task is linked to
     int subject_id {
       table = "subject"
     }
-
-    // Task title/name (required)
-    text title filters=trim {
-      validations = "required|max:255"
-    }
-    
-    // Detailed task description (optional)
-    text description? filters=trim {
-      validations = "max:2000"
-    }
-    
-    // Due date for task completion
-    date due_date {
-      validations = "required|date"
-    }
-
-    // Status of task completion
-    enum status {
+  
+    // Title of the academic task (max 255 characters)
+    text title filters=trim|max:255
+  
+    // Optional detailed description of the task
+    text description? filters=trim
+  
+    // Due date for the task
+    date due_date
+  
+    // Current status of the task, defaults to pending
+    enum status?=pending {
       values = ["pending", "in_progress", "completed", "overdue"]
-      default = "pending"
-    }
-
-    // Additional metadata stored as JSON
-    JSON? metadata {
-      visibility = "private"
     }
   }
 
@@ -55,12 +40,13 @@ table academic_task {
     {type: "primary", field: [{name: "id"}]}
     {type: "btree", field: [{name: "created_at", op: "desc"}]}
     {type: "btree", field: [{name: "updated_at", op: "desc"}]}
-    {type: "btree", field: [{name: "user_id", op: "asc"}, {name: "idx_user_id"}]}
-    {type: "btree", field: [{name: "subject_id", op: "asc"}, {name: "idx_subject_id"}]}
-    {type: "btree", field: [{name: "status", op: "asc"}, {name: "idx_status"}]}
-    {type: "btree", field: [{name: "user_id", op: "asc"}, {name: "status", op: "asc"}, {name: "idx_user_status"}]}
-    {type: "btree", field: [{name: "due_date", op: "asc"}, {name: "idx_due_date"}]}
+    {type: "btree", field: [{name: "user_id", op: "asc"}]}
+    {type: "btree", field: [{name: "subject_id", op: "asc"}]}
+    {type: "btree", field: [{name: "status", op: "asc"}]}
+    {
+      type : "btree"
+      field: [{name: "user_id", op: "asc"}, {name: "status", op: "asc"}]
+    }
+    {type: "btree", field: [{name: "due_date", op: "asc"}]}
   ]
-
-  tags = ["xano:academic-tasks"]
 }
